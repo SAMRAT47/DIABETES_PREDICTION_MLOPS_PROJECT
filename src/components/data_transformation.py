@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 from imblearn.combine import SMOTEENN
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler,RobustScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
-from src.constants import TARGET_COLUMN, SCHEMA_FILE_PATH, CURRENT_YEAR
+from src.constants import TARGET_COLUMN, SCHEMA_FILE_PATH
 from src.entity.config_entity import DataTransformationConfig
 from src.entity.artifact_entity import DataTransformationArtifact, DataIngestionArtifact, DataValidationArtifact
 from src.exception import MyException
@@ -33,247 +33,151 @@ class DataTransformation:
         except Exception as e:
             raise MyException(e, sys)
 
-    def get_data_transformer_object(self) -> Pipeline:
-        """Creates and returns a data transformer object for the data."""
-        logging.info("Entered get_data_transformer_object method of DataTransformation class")
+    def replace_zeros(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Replace zero values in specified columns with the median of that column."""
+        columns = self._schema_config['columns_to_replace_zeros']
+        for col in columns:
+            if col in df.columns:
+                df[col] = df[col].replace(0, np.nan)
+                median_val = df[col].median()
+                df[col] = df[col].fillna(median_val)
+        return df
+
+    def impute_missing_values_by_class(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Impute missing values in each numeric column using the mean of that column grouped by target class.
+        """
         try:
-            # Initialize transformers
-            robust_scaler = RobustScaler()
-            # standard_scaler = StandardScaler()
-            logging.info("Transformers Initialized: RobustScaler-StandardScaler")
-            
-            #Load schema configurations
-            robust_columns = self._schema_config['robust_columns']
-            # standard_columns = self._schema_config['std_columns']
-            logging.info("Cols loaded from schema.")
-            
-            # Creating preprocessor pipeline
-            preprocessor = ColumnTransformer(
-                transformers=[
-                    ("RobustScaler", robust_scaler, robust_columns)
-                    # ,
-                    # ("StandardScaler", standard_scaler, standard_columns)
-                ],
-                remainder='passthrough'  # Leaves other columns as they are
-            )
-            
-            # Wrapping everything in a single pipeline
-            final_pipeline = Pipeline(steps=[("Preprocessor", preprocessor)])
-            logging.info("Final Pipeline Ready!!")
-            logging.info("Exited get_data_transformer_object method of DataTransformation class")
-            return final_pipeline
+            logging.info("Imputing missing values by class.")
+            df_copy = df.copy()
+            numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
+
+            if TARGET_COLUMN not in df_copy.columns:
+                raise Exception(f"{TARGET_COLUMN} not found in dataframe for class-based imputation.")
+
+            for col in numeric_cols:
+                if df_copy[col].isnull().sum() > 0 and col != TARGET_COLUMN:
+                    df_copy[col] = df_copy.groupby(TARGET_COLUMN)[col].transform(lambda x: x.fillna(x.mean()))
+
+            return df_copy
         except Exception as e:
-            logging.exception("Exception occurred in get_data_transformer_object method of DataTransformation class")
-            raise MyException(e, sys) from e
+            raise MyException(e, sys)
 
 
+    def feature_engineering(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Apply domain-specific feature engineering as per schema."""
+        logging.info("Starting feature engineering...")
+        # BMI Category
+        df['NewBMI'] = pd.cut(
+            df['BMI'],
+            bins=[0, 18.5, 25, 30, 35, np.inf],
+            labels=['Underweight', 'Normal', 'Overweight', 'Obesity 1', 'Obesity 2']
+        )
 
-    def _replace_zeros_with_nan(self, df):
-        """Replace zeros with NaN in columns except the target column and log NaN values information."""
-        logging.info("Replacing zeros with NaN in columns except the target column")
-        columns_to_replace = [col for col in df.columns if col != TARGET_COLUMN]
-        df[columns_to_replace] = df[columns_to_replace].replace(0, np.nan)
+        # Insulin Score
+        df['NewInsulinScore'] = df['Insulin'].apply(lambda x: "Normal" if 70 <= x <= 130 else "Abnormal")
 
-        # Log NaN values information
-        nan_counts = df[columns_to_replace].isnull().sum()
-        logging.info("NaN values information after replacement:")
-        for col, count in nan_counts.items():
-            logging.info(f"Column: {col}, NaN count: {count}, NaN percentage: {(count / len(df)) * 100:.2f}%")
-
-        return df
-    
-    def _replace_nan_with_class_mean(self, input_feature_train_df, target_feature_train_df):
-        logging.info("Entering _replace_nan_with_class_mean method")
-        
-        target_column = TARGET_COLUMN
-        
-        temp_df = pd.concat([input_feature_train_df, target_feature_train_df], axis=1)
-        
-        for col in temp_df.columns:
-            if col != target_column and temp_df[col].dtype.kind in 'bifc':  # Check if column is numeric
-                mean_values = temp_df[[col, target_column]].dropna(subset=[col]).groupby(target_column)[col].mean().reset_index()
-                for class_value in temp_df[target_column].unique():
-                    temp_df.loc[(temp_df[target_column] == class_value) & (temp_df[col].isnull()), col] = round(mean_values.loc[mean_values[target_column] == class_value, col].values[0])
-        
-        input_feature_train_df = temp_df.drop(columns=[target_column])
-        
-        logging.info("Exiting _replace_nan_with_class_mean method")
-        
-        return input_feature_train_df
-
-
-
-    def _replace_outliers_with_q1_q3(self, df):
-        """Detect outliers and replace them with Q1 and Q3 values respectively."""
-        logging.info("Detecting outliers and replacing them with Q1 and Q3 values respectively")
-
-        # Detect outliers and replace them with Q1 and Q3 values respectively
-        for col in df.columns:
-            if col != TARGET_COLUMN:
-                Q1 = df[col].quantile(0.25)
-                Q3 = df[col].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - 1.5 * IQR
-                upper_bound = Q3 + 1.5 * IQR
-                df[col] = df[col].apply(lambda x: Q1 if x < lower_bound else (Q3 if x > upper_bound else x))
-
-        # Log information about outliers
-        logging.info("Outliers replaced with Q1 and Q3 values:")
-        for col in df.columns:
-            if col != TARGET_COLUMN:
-                Q1 = df[col].quantile(0.25)
-                Q3 = df[col].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - 1.5 * IQR
-                upper_bound = Q3 + 1.5 * IQR
-                outlier_count = df[(df[col] < lower_bound) | (df[col] > upper_bound)].shape[0]
-                logging.info(f"Column: {col}, Outlier count after replacement: {outlier_count}")
-
+        # Glucose Category
+        df['NewGlucose'] = pd.cut(
+            df['Glucose'],
+            bins=[0, 70, 99, 125, 200, np.inf],
+            labels=['Low', 'Normal', 'Overweight', 'Secret', 'High']
+        )
+        logging.info("Feature engineering done.")
         return df
 
+    def get_data_transformer_object(self):
+            try:
+                logging.info("Creating data transformer object.")
 
-    def _create_new_bmi_column(self, df):
-        """Create a new column named 'NewBMI' based on the ranges of the 'BMI' column."""
-        logging.info("Creating a new column named 'NewBMI' based on the ranges of the 'BMI' column")
-        bins = [0, 18.5, 24.9, 29.9, 34.9, 39.9, float('inf')]
-        labels = ["Underweight","Normal", "Overweight","Obesity 1", "Obesity 2", "Obesity 3"]
-        df['NewBMI'] = pd.cut(df['BMI'], bins=bins, labels=labels, right=False)
-        logging.info("New column 'NewBMI' created successfully")
-        return df
+                num_pipeline = Pipeline(steps=[
+                    ('scaler', StandardScaler())
+                ])
 
-    def _create_new_insulin_score_column(self, df):
-        """Create a new column named 'NewInsulinScore' based on the 'Insulin' column."""
-        logging.info("Creating a new column named 'NewInsulinScore' based on the 'Insulin' column")
-        df['NewInsulinScore'] = np.where((df['Insulin'] >= 16) & (df['Insulin'] <= 166), 'Normal', 'Abnormal')
-        logging.info("New column 'NewInsulinScore' created successfully")
-        return df
-    
-    def _create_new_glucose_column(self, df):
-        """Create a new column named 'NewGlucose' based on the 'Glucose' column."""
-        logging.info("Creating a new column named 'NewGlucose' based on the 'Glucose' column")
-        bins = [0, 70, 99, 126, float('inf')]
-        labels = ["Low", "Normal", "Overweight", "Secret"]
-        df['NewGlucose'] = pd.cut(df['Glucose'], bins=bins, labels=labels, right=False)
-        logging.info("New column 'NewGlucose' created successfully")
-        return df
+                cat_pipeline = Pipeline(steps=[
+                    ('onehot', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'))
+                ])
 
-    def _apply_one_hot_encoding(self, df):
-        """Apply one-hot encoding to the specified columns."""
-        logging.info("Applying one-hot encoding to the specified columns")
-        columns_to_encode = ["NewBMI", "NewInsulinScore", "NewGlucose"]
-        df = pd.get_dummies(df, columns=columns_to_encode, drop_first=True).astype(int)
-        logging.info("One-hot encoding applied successfully")
-        return df
+                preprocessor = ColumnTransformer(
+                    transformers=[
+                        ('num', num_pipeline, self._schema_config['standard_scaler_columns']),
+                        ('cat', cat_pipeline, self._schema_config['columns_to_apply_one_hot_encoding'])
+                    ])
 
+                logging.info("Pipeline created successfully.")
+                return preprocessor
 
-
-    # def _create_dummy_columns(self, df):
-    #     """Create dummy variables for categorical features."""
-    #     logging.info("Creating dummy variables for categorical features")
-    #     df = pd.get_dummies(df, drop_first=True)
-    #     return df
-
-    # def _rename_columns(self, df):
-    #     """Rename specific columns and ensure integer types for dummy columns."""
-    #     logging.info("Renaming specific columns and casting to int")
-    #     df = df.rename(columns={
-    #         "Vehicle_Age_< 1 Year": "Vehicle_Age_lt_1_Year",
-    #         "Vehicle_Age_> 2 Years": "Vehicle_Age_gt_2_Years"
-    #     })
-    #     for col in ["Vehicle_Age_lt_1_Year", "Vehicle_Age_gt_2_Years", "Vehicle_Damage_Yes"]:
-    #         if col in df.columns:
-    #             df[col] = df[col].astype('int')
-    #     return df
-
-    def _drop_id_column(self, df):
-        """Drop the 'id' column if it exists."""
-        logging.info("Dropping 'id' column")
-        drop_col = self._schema_config['drop_columns']
-        if drop_col in df.columns:
-            df = df.drop(drop_col, axis=1)
-        return df
+            except Exception as e:
+                logging.exception("Exception occurred while creating transformer object.")
+                raise MyException(e, sys) from e
 
 
     def initiate_data_transformation(self) -> DataTransformationArtifact:
-        """
-        Initiates the data transformation component for the pipeline.
-        """
         try:
-            logging.info("Data Transformation Started !!!")
+            logging.info("Data Transformation Started")
+
             if not self.data_validation_artifact.validation_status:
                 raise Exception(self.data_validation_artifact.message)
 
             # Load train and test data
-            train_df = self.read_data(file_path=self.data_ingestion_artifact.trained_file_path)
-            test_df = self.read_data(file_path=self.data_ingestion_artifact.test_file_path)
-            logging.info("Train-Test data loaded")
+            train_df = self.read_data(self.data_ingestion_artifact.trained_file_path)
+            test_df = self.read_data(self.data_ingestion_artifact.test_file_path)
 
+            # Replace zeros
+            train_df = self.replace_zeros(train_df)
+            test_df = self.replace_zeros(test_df)
+
+            # Impute missing values with class-wise mean
+            train_df = self.impute_missing_values_by_class(train_df)
+            test_df = self.impute_missing_values_by_class(test_df)
+
+            # Feature engineering
+            train_df = self.feature_engineering(train_df)
+            test_df = self.feature_engineering(test_df)
+
+            # Drop ID column
+            drop_column = self._schema_config['drop_columns']
+            if drop_column in train_df.columns:
+                train_df.drop(columns=[drop_column], inplace=True)
+            if drop_column in test_df.columns:
+                test_df.drop(columns=[drop_column], inplace=True)
+
+            # Split features and target
             input_feature_train_df = train_df.drop(columns=[TARGET_COLUMN], axis=1)
             target_feature_train_df = train_df[TARGET_COLUMN]
 
             input_feature_test_df = test_df.drop(columns=[TARGET_COLUMN], axis=1)
             target_feature_test_df = test_df[TARGET_COLUMN]
-            logging.info("Input and Target cols defined for both train and test df.")
 
-            # Apply custom transformations in specified sequence
-            transformation_functions = [
-                self._drop_id_column,
-                self._replace_zeros_with_nan,
-                self._replace_outliers_with_q1_q3,
-                self._create_new_bmi_column,
-                self._create_new_insulin_score_column,
-                self._create_new_glucose_column,
-                self._apply_one_hot_encoding
-            ]
+            # Apply transformations
+            preprocessor = self.get_data_transformer_object()
+            input_feature_train_arr = preprocessor.fit_transform(input_feature_train_df)
+            input_feature_test_arr = preprocessor.transform(input_feature_test_df)
 
-            for func in transformation_functions:
-                input_feature_train_df = func(input_feature_train_df)
-                input_feature_test_df = func(input_feature_test_df)
+            # Handle imbalance
+            smt = SMOTEENN(sampling_strategy="minority")
+            input_feature_train_final, target_feature_train_final = smt.fit_resample(
+                input_feature_train_arr, target_feature_train_df
+            )
+            input_feature_test_final, target_feature_test_final = smt.fit_resample(
+                input_feature_test_arr, target_feature_test_df
+            )
 
-                input_feature_train_df = self._replace_nan_with_class_mean(input_feature_train_df, target_feature_train_df)
-                input_feature_test_df = self._replace_nan_with_class_mean(input_feature_test_df, target_feature_test_df)
-                logging.info("Custom transformations applied to train and test data")
-                
-                # Get the preprocessor object
-                preprocessor = self.get_data_transformer_object()
-                logging.info("Got the preprocessor object")
+            # Combine features and targets
+            train_arr = np.c_[input_feature_train_final, target_feature_train_final]
+            test_arr = np.c_[input_feature_test_final, target_feature_test_final]
 
-                print(input_feature_train_df.columns)
-                print(input_feature_test_df.columns)
+            # Save outputs
+            save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
+            save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, train_arr)
+            save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, test_arr)
 
-                
-                # Apply transformation to training and testing data
-                logging.info("Initializing transformation for Training-data")
-                input_feature_train_arr = preprocessor.fit_transform(input_feature_train_df)
-                logging.info("Initializing transformation for Testing-data")
-                input_feature_test_arr = preprocessor.transform(input_feature_test_df)
-                logging.info("Transformation done end to end to train-test df.")
-
-                logging.info("Applying SMOTEENN for handling imbalanced dataset.")
-                smt = SMOTEENN(sampling_strategy="minority")
-                input_feature_train_final, target_feature_train_final = smt.fit_resample(
-                    input_feature_train_arr, target_feature_train_df
-                )
-                input_feature_test_final, target_feature_test_final = smt.fit_resample(
-                    input_feature_test_arr, target_feature_test_df
-                )
-                logging.info("SMOTEENN applied to train-test df.")
-
-                train_arr = np.c_[input_feature_train_final, np.array(target_feature_train_final)]
-                test_arr = np.c_[input_feature_test_final, np.array(target_feature_test_final)]
-                logging.info("feature-target concatenation done for train-test df.")
-
-                save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
-                save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, array=train_arr)
-                save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, array=test_arr)
-                logging.info("Saving transformation object and transformed files.")
-
-                logging.info("Data transformation completed successfully")
-                return DataTransformationArtifact(
-                    transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,
-                    transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,
-                    transformed_test_file_path=self.data_transformation_config.transformed_test_file_path
-                )
+            logging.info("Data transformation completed successfully.")
+            return DataTransformationArtifact(
+                transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,
+                transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,
+                transformed_test_file_path=self.data_transformation_config.transformed_test_file_path
+            )
 
         except Exception as e:
-                raise MyException(e, sys) from e
+            raise MyException(e, sys) from e

@@ -26,9 +26,8 @@ categorical_columns:
 
 drop_columns: _id
 
-
 # for data transformation
-robust_columns:
+robust_scaler_columns:
   - Pregnancies
   - BloodPressure
   - SkinThickness
@@ -38,7 +37,7 @@ robust_columns:
   - Insulin
   - Glucose
 
-std_columns:
+standard_scaler_columns:
   - Pregnancies
   - BloodPressure
   - SkinThickness
@@ -47,16 +46,7 @@ std_columns:
   - BMI
   - Insulin
   - Glucose
-  - NewBMI_Obesity 1
-  - NewBMI_Obesity 2 
-  - NewBMI_Obesity 3
-  - NewBMI_Overweight
-  - NewBMI_Underweight
-  - NewInsulinScore_Normal
-  - NewGlucose_Low
-  - NewGlucose_Normal
-  - NewGlucose_Overweight
-  - NewGlucose_Secret
+
 
 columns_to_replace_zeros:
   - Pregnancies
@@ -68,3 +58,7 @@ columns_to_replace_zeros:
   - DiabetesPedigreeFunction
   - Age
 
+columns_to_apply_one_hot_encoding:
+  - NewBMI
+  - NewInsulinScore
+  - NewGlucose
