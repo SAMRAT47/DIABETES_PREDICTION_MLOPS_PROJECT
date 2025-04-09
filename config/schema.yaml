@@ -24,7 +24,8 @@ categorical_columns:
   - Insulin
   - Glucose
 
-drop_columns: _id
+drop_columns: 
+  - _id
 
 # for data transformation
 robust_scaler_columns:

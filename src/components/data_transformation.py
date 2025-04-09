@@ -33,22 +33,24 @@ class DataTransformation:
         except Exception as e:
             raise MyException(e, sys)
 
-    def replace_zeros(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Replace zero values in specified columns with the median of that column."""
-        columns = self._schema_config['columns_to_replace_zeros']
-        for col in columns:
-            if col in df.columns:
-                df[col] = df[col].replace(0, np.nan)
-                median_val = df[col].median()
-                df[col] = df[col].fillna(median_val)
-        return df
+    def _replace_zeros(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Replace zero values in specified columns with NaN for later imputation."""
+        try:
+            logging.info("Replacing zero values with NaN.")
+            columns = self._schema_config['columns_to_replace_zeros']
+            for col in columns:
+                if col in df.columns:
+                    df[col] = df[col].replace(0, np.nan)
+            return df
+        except Exception as e:
+            raise MyException(e, sys)
 
-    def impute_missing_values_by_class(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _impute_missing_values_by_class(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Impute missing values in each numeric column using the mean of that column grouped by target class.
+        Impute missing (NaN) values in numeric columns using the mean of that column grouped by target class.
         """
         try:
-            logging.info("Imputing missing values by class.")
+            logging.info("Imputing missing values by class (Outcome).")
             df_copy = df.copy()
             numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
 
@@ -56,15 +58,42 @@ class DataTransformation:
                 raise Exception(f"{TARGET_COLUMN} not found in dataframe for class-based imputation.")
 
             for col in numeric_cols:
-                if df_copy[col].isnull().sum() > 0 and col != TARGET_COLUMN:
+                if col != TARGET_COLUMN and df_copy[col].isnull().sum() > 0:
                     df_copy[col] = df_copy.groupby(TARGET_COLUMN)[col].transform(lambda x: x.fillna(x.mean()))
 
             return df_copy
         except Exception as e:
             raise MyException(e, sys)
+        
+    def _impute_outliers_with_iqr(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Replace outliers in numeric columns using IQR method:
+        - Values below Q1 - 1.5*IQR will be replaced with Q1
+        - Values above Q3 + 1.5*IQR will be replaced with Q3
+        """
+        try:
+            logging.info("Imputing outliers using IQR method.")
+            df_copy = df.copy()
+            numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
+            numeric_cols = [col for col in numeric_cols if col != TARGET_COLUMN]
+
+            for col in numeric_cols:
+                Q1 = df_copy[col].quantile(0.25)
+                Q3 = df_copy[col].quantile(0.75)
+                IQR = Q3 - Q1
+                lower_bound = Q1 - 1.5 * IQR
+                upper_bound = Q3 + 1.5 * IQR
+
+                df_copy[col] = np.where(df_copy[col] < lower_bound, Q1, df_copy[col])
+                df_copy[col] = np.where(df_copy[col] > upper_bound, Q3, df_copy[col])
+
+            return df_copy
+
+        except Exception as e:
+            raise MyException(e, sys)
 
 
-    def feature_engineering(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _feature_engineering(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply domain-specific feature engineering as per schema."""
         logging.info("Starting feature engineering...")
         # BMI Category
@@ -85,31 +114,55 @@ class DataTransformation:
         )
         logging.info("Feature engineering done.")
         return df
+    
+    def _drop_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Drop columns as specified in the schema config under 'drop_columns',
+        and log the names of the columns being dropped.
+        """
+        try:
+            logging.info("Checking columns to drop as per schema config.")
+            drop_cols = self._schema_config.get('drop_columns', [])
+            if isinstance(drop_cols, str):
+                drop_cols = [drop_cols]
+
+            drop_cols_present = [col for col in drop_cols if col in df.columns]
+
+            if drop_cols_present:
+                logging.info(f"Dropping columns: {drop_cols_present}")
+                df = df.drop(columns=drop_cols_present)
+            else:
+                logging.info("No matching columns found to drop.")
+
+            return df
+
+        except Exception as e:
+            raise MyException(e, sys)
 
     def get_data_transformer_object(self):
-            try:
-                logging.info("Creating data transformer object.")
+        try:
+            logging.info("Creating data transformer object.")
 
-                num_pipeline = Pipeline(steps=[
-                    ('scaler', StandardScaler())
+            num_pipeline = Pipeline(steps=[
+            ('scaler', StandardScaler())
                 ])
 
-                cat_pipeline = Pipeline(steps=[
-                    ('onehot', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'))
-                ])
+            cat_pipeline = Pipeline(steps=[
+            ('onehot', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'))
+            ])
 
-                preprocessor = ColumnTransformer(
-                    transformers=[
+            preprocessor = ColumnTransformer(
+            transformers=[
                         ('num', num_pipeline, self._schema_config['standard_scaler_columns']),
                         ('cat', cat_pipeline, self._schema_config['columns_to_apply_one_hot_encoding'])
                     ])
 
-                logging.info("Pipeline created successfully.")
-                return preprocessor
+            logging.info("Pipeline created successfully.")
+            return preprocessor
 
-            except Exception as e:
-                logging.exception("Exception occurred while creating transformer object.")
-                raise MyException(e, sys) from e
+        except Exception as e:
+            logging.exception("Exception occurred while creating transformer object.")
+            raise MyException(e, sys) from e
 
 
     def initiate_data_transformation(self) -> DataTransformationArtifact:
@@ -124,23 +177,24 @@ class DataTransformation:
             test_df = self.read_data(self.data_ingestion_artifact.test_file_path)
 
             # Replace zeros
-            train_df = self.replace_zeros(train_df)
-            test_df = self.replace_zeros(test_df)
+            train_df = self._replace_zeros(train_df)
+            test_df = self._replace_zeros(test_df)
 
             # Impute missing values with class-wise mean
-            train_df = self.impute_missing_values_by_class(train_df)
-            test_df = self.impute_missing_values_by_class(test_df)
+            train_df = self._impute_missing_values_by_class(train_df)
+            test_df = self._impute_missing_values_by_class(test_df)
+
+            # Impute outliers using IQR method
+            train_df = self._impute_outliers_with_iqr(train_df)
+            test_df = self._impute_outliers_with_iqr(test_df)
 
             # Feature engineering
-            train_df = self.feature_engineering(train_df)
-            test_df = self.feature_engineering(test_df)
+            train_df = self._feature_engineering(train_df)
+            test_df = self._feature_engineering(test_df)
 
-            # Drop ID column
-            drop_column = self._schema_config['drop_columns']
-            if drop_column in train_df.columns:
-                train_df.drop(columns=[drop_column], inplace=True)
-            if drop_column in test_df.columns:
-                test_df.drop(columns=[drop_column], inplace=True)
+            # Drop columns based on schema
+            train_df = self._drop_columns(train_df)
+            test_df = self._drop_columns(test_df)
 
             # Split features and target
             input_feature_train_df = train_df.drop(columns=[TARGET_COLUMN], axis=1)
