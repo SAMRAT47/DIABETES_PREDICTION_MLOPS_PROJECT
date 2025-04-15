@@ -28,13 +28,31 @@ class Proj1Estimator:
             print(e)
             return False
 
-    def load_model(self,)->MyModel:
+    def load_model(self) -> MyModel:
         """
-        Load the model from the model_path
-        :return:
+        Load the model from the model_path.
         """
+        try:
+            loaded_model = self.s3.load_model(self.model_path, bucket_name=self.bucket_name)
 
-        return self.s3.load_model(self.model_path,bucket_name=self.bucket_name)
+            # Check if the loaded model is a dictionary, and if so, wrap it in MyModel
+            if isinstance(loaded_model, dict):
+                preprocessing_object = loaded_model.get('preprocessing_object')
+                trained_model_object = loaded_model.get('trained_model_object')
+                
+                # Ensure both parts exist before creating MyModel
+                if preprocessing_object is None or trained_model_object is None:
+                    raise MyException("Loaded model missing necessary components", sys)
+                
+                return MyModel(preprocessing_object=preprocessing_object, trained_model_object=trained_model_object)
+            
+            elif isinstance(loaded_model, MyModel):
+                return loaded_model
+            else:
+                raise MyException("Model loaded is not in expected format", sys)
+
+        except Exception as e:
+            raise MyException(e, sys)
 
     def save_model(self,from_file,remove:bool=False)->None:
         """

@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from imblearn.combine import SMOTEENN
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder,RobustScaler
 from sklearn.compose import ColumnTransformer
 
 from src.constants import TARGET_COLUMN, SCHEMA_FILE_PATH
@@ -100,7 +100,7 @@ class DataTransformation:
         df['NewBMI'] = pd.cut(
             df['BMI'],
             bins=[0, 18.5, 25, 30, 35, np.inf],
-            labels=['Underweight', 'Normal', 'Overweight', 'Obesity 1', 'Obesity 2']
+            labels=['Underweight', 'Normal', 'Overweight', 'Obesity_type1', 'Obesity_type2']
         )
 
         # Insulin Score
@@ -115,6 +115,8 @@ class DataTransformation:
         logging.info("Feature engineering done.")
         return df
     
+
+
     def _drop_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Drop columns as specified in the schema config under 'drop_columns',
@@ -139,30 +141,42 @@ class DataTransformation:
         except Exception as e:
             raise MyException(e, sys)
 
-    def get_data_transformer_object(self):
+    def get_data_transformer_object(self) -> Pipeline:
+        logging.info("Entered get_data_transformer_object method of DataTransformation class")
+
         try:
-            logging.info("Creating data transformer object.")
+            # Initialize transformers
+            robust_scaler = RobustScaler()
+            standard_scaler = StandardScaler()
+            one_hot_encoder = OneHotEncoder(handle_unknown='ignore', sparse_output=False)
 
-            num_pipeline = Pipeline(steps=[
-            ('scaler', StandardScaler())
-                ])
+            logging.info("Transformers Initialized: RobustScaler, StandardScaler, OneHotEncoder")
 
-            cat_pipeline = Pipeline(steps=[
-            ('onehot', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='ignore'))
-            ])
+            # Load schema configurations
+            robust_scaler_columns = self._schema_config['robust_scaler_columns']
+            standard_scaler_columns = self._schema_config['standard_scaler_columns']
+            ohe_columns = self._schema_config['columns_to_apply_one_hot_encoding']
 
+            logging.info("Columns loaded from schema")
+
+            # Creating preprocessor pipeline
             preprocessor = ColumnTransformer(
-            transformers=[
-                        ('num', num_pipeline, self._schema_config['standard_scaler_columns']),
-                        ('cat', cat_pipeline, self._schema_config['columns_to_apply_one_hot_encoding'])
-                    ])
+                transformers=[
+                    ("RobustScaler", robust_scaler, robust_scaler_columns),
+                    ("StandardScaler", standard_scaler, standard_scaler_columns),
+                    ("OneHotEncoder", one_hot_encoder, ohe_columns)
+                ],
+                remainder='passthrough'
+            )
 
-            logging.info("Pipeline created successfully.")
-            return preprocessor
+            final_pipeline = Pipeline(steps=[("Preprocessor", preprocessor)])
+            logging.info("Final Pipeline Ready!!")
+            logging.info("Exited get_data_transformer_object method of DataTransformation class")
+            return final_pipeline
 
         except Exception as e:
-            logging.exception("Exception occurred while creating transformer object.")
-            raise MyException(e, sys) from e
+            logging.exception("Exception occurred in get_data_transformer_object")
+            raise MyException(e, sys)
 
 
     def initiate_data_transformation(self) -> DataTransformationArtifact:
@@ -208,7 +222,7 @@ class DataTransformation:
             input_feature_train_arr = preprocessor.fit_transform(input_feature_train_df)
             input_feature_test_arr = preprocessor.transform(input_feature_test_df)
 
-            # Handle imbalance
+            logging.info("Applying SMOTEENN for handling imbalanced dataset.")
             smt = SMOTEENN(sampling_strategy="minority")
             input_feature_train_final, target_feature_train_final = smt.fit_resample(
                 input_feature_train_arr, target_feature_train_df
@@ -216,17 +230,18 @@ class DataTransformation:
             input_feature_test_final, target_feature_test_final = smt.fit_resample(
                 input_feature_test_arr, target_feature_test_df
             )
+            logging.info("SMOTEENN applied to train-test df.")
 
-            # Combine features and targets
-            train_arr = np.c_[input_feature_train_final, target_feature_train_final]
-            test_arr = np.c_[input_feature_test_final, target_feature_test_final]
+            train_arr = np.c_[input_feature_train_final, np.array(target_feature_train_final)]
+            test_arr = np.c_[input_feature_test_final, np.array(target_feature_test_final)]
+            logging.info("feature-target concatenation done for train-test df.")
 
-            # Save outputs
             save_object(self.data_transformation_config.transformed_object_file_path, preprocessor)
-            save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, train_arr)
-            save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, test_arr)
+            save_numpy_array_data(self.data_transformation_config.transformed_train_file_path, array=train_arr)
+            save_numpy_array_data(self.data_transformation_config.transformed_test_file_path, array=test_arr)
+            logging.info("Saving transformation object and transformed files.")
 
-            logging.info("Data transformation completed successfully.")
+            logging.info("Data transformation completed successfully")
             return DataTransformationArtifact(
                 transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,
                 transformed_train_file_path=self.data_transformation_config.transformed_train_file_path,

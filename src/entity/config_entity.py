@@ -65,4 +65,9 @@ class ModelPusherConfig:
     bucket_name: str = MODEL_BUCKET_NAME
     s3_model_key_path: str = MODEL_FILE_NAME
 
+@dataclass
+class DiabetesPredictorConfig:
+    model_file_path: str = MODEL_FILE_NAME
+    model_bucket_name: str = MODEL_BUCKET_NAME
+
     

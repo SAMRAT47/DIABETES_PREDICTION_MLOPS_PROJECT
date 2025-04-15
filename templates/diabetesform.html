@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diabetes Prediction Form</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}">
+  <style>
+    .input-group {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    .input-group .field {
+      width: 48%;
+    }
+    .optional-label {
+      font-size: 0.8em;
+      color: #666;
+      font-style: italic;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <!-- Banner Section -->
+  <div class="banner">
+    <img src="{{ url_for('static', path='images/banner.jpg') }}" alt="Diabetes Prediction Banner" class="banner-image">
+  </div>
+
+  <!-- Logo Section (Optional) -->
+  <div class="logo">
+    <img src="{{ url_for('static', path='images/logo.png') }}" alt="Logo" class="logo-image">
+  </div>
+
+  <div class="form-container">
+    <h2>Diabetes Prediction Form</h2>
+
+    <form action="/" method="post">
+      <!-- Required Fields -->
+      <label for="Pregnancies">Pregnancies:</label>
+      <input type="number" id="Pregnancies" name="Pregnancies" required>
+
+      <label for="BloodPressure">Blood Pressure:</label>
+      <input type="number" id="BloodPressure" name="BloodPressure" required>
+
+      <label for="SkinThickness">Skin Thickness:</label>
+      <input type="number" id="SkinThickness" name="SkinThickness" required>
+
+      <label for="DiabetesPedigreeFunction">Diabetes Pedigree Function:</label>
+      <input type="number" id="DiabetesPedigreeFunction" name="DiabetesPedigreeFunction" step="0.01" required>
+
+      <label for="Age">Age:</label>
+      <input type="number" id="Age" name="Age" required>
+
+      <!-- BMI Section - Pair numeric input with dropdown -->
+      <div class="input-group">
+        <div class="field">
+          <label for="BMI">BMI: <span class="optional-label">(optional)</span></label>
+          <input type="number" id="BMI" name="BMI" step="0.1" min="10" max="50">
+        </div>
+        <div class="field">
+          <label for="NewBMI">BMI Category:</label>
+          <select id="NewBMI" name="NewBMI" required>
+            <option value="" disabled selected>Select BMI Category</option>
+            {% for option in bmi_options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Insulin Section - Pair numeric input with dropdown -->
+      <div class="input-group">
+        <div class="field">
+          <label for="Insulin">Insulin: <span class="optional-label">(optional)</span></label>
+          <input type="number" id="Insulin" name="Insulin" min="0" max="500">
+        </div>
+        <div class="field">
+          <label for="NewInsulinScore">Insulin Category:</label>
+          <select id="NewInsulinScore" name="NewInsulinScore" required>
+            <option value="" disabled selected>Select Insulin Category</option>
+            {% for option in insulin_options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Glucose Section - Pair numeric input with dropdown -->
+      <div class="input-group">
+        <div class="field">
+          <label for="Glucose">Glucose: <span class="optional-label">(optional)</span></label>
+          <input type="number" id="Glucose" name="Glucose" min="0" max="300">
+        </div>
+        <div class="field">
+          <label for="NewGlucose">Glucose Category:</label>
+          <select id="NewGlucose" name="NewGlucose" required>
+            <option value="" disabled selected>Select Glucose Category</option>
+            {% for option in glucose_options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <input type="submit" value="Predict">
+    </form>
+
+    {% if context %}
+    <div class="result {{ 'success' if 'Non-Diabetic' in context else 'error' }}">
+      <h3>{{ context | safe }}</h3>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    // Optional: Add JavaScript to make the form more interactive
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auto-select corresponding category when numeric value changes
+      document.getElementById('BMI').addEventListener('input', function() {
+        const bmi = parseFloat(this.value);
+        let category = '';
+        
+        if (bmi <= 18.5) category = 'Underweight';
+        else if (bmi <= 25) category = 'Normal';
+        else if (bmi <= 30) category = 'Overweight';
+        else if (bmi <= 35) category = 'Obesity_type1';
+        else category = 'Obesity_type2';
+        
+        document.getElementById('NewBMI').value = category;
+      });
+
+      document.getElementById('Insulin').addEventListener('input', function() {
+        const insulin = parseFloat(this.value);
+        document.getElementById('NewInsulinScore').value = (70 <= insulin && insulin <= 130) ? 'Normal' : 'Abnormal';
+      });
+
+      document.getElementById('Glucose').addEventListener('input', function() {
+        const glucose = parseFloat(this.value);
+        let category = '';
+        
+        if (glucose < 70) category = 'Low';
+        else if (glucose <= 99) category = 'Normal';
+        else if (glucose <= 125) category = 'Overweight';
+        else if (glucose <= 200) category = 'Secret';
+        else category = 'High';
+        
+        document.getElementById('NewGlucose').value = category;
+      });
+    });
+  </script>
+</body>
+</html>

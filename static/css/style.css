@@ -1,0 +1,134 @@
+/* Reset default styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  /* Body Styling */
+  body {
+    background-color: #f7f9fc;
+    color: #333;
+    padding: 20px;
+  }
+  
+  /* Banner */
+  .banner {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .banner-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  
+  /* Logo */
+  .logo {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .logo-image {
+    width: 100px;
+    height: auto;
+  }
+  
+  /* Form Container */
+  .form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+  }
+  
+  /* Headings */
+  .form-container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #1a73e8;
+  }
+  
+  /* Form Fields */
+  label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  
+  input[type="number"],
+  select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    transition: border-color 0.3s ease;
+  }
+  
+  input[type="number"]:focus,
+  select:focus {
+    border-color: #1a73e8;
+    outline: none;
+  }
+  
+  /* Input Groups */
+  .input-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .input-group .field {
+    flex: 1;
+  }
+  
+  /* Optional Text */
+  .optional-label {
+    font-size: 0.8em;
+    color: #888;
+    font-style: italic;
+  }
+  
+  /* Submit Button */
+  input[type="submit"] {
+    width: 100%;
+    background-color: #1a73e8;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  input[type="submit"]:hover {
+    background-color: #155cb0;
+  }
+  
+  /* Result Box */
+  .result {
+    margin-top: 25px;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 18px;
+  }
+  .success {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  /* Responsive */
+  @media (max-width: 600px) {
+    .input-group {
+      flex-direction: column;
+    }
+  }

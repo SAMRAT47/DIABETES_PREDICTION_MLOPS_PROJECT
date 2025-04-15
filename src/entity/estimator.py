@@ -34,6 +34,17 @@ class MyModel:
         try:
             logging.info("Starting prediction process.")
 
+            # Defensive check for dataframe type
+            if isinstance(dataframe, dict):
+                logging.warning("Input to predict was a dict. Converting to DataFrame.")
+                dataframe = pd.DataFrame([dataframe])
+            elif isinstance(dataframe, list):
+                dataframe = pd.DataFrame(dataframe)
+
+            # Check that the preprocessing object is valid
+            if not hasattr(self.preprocessing_object, "transform"):
+                raise TypeError(f"Expected preprocessing_object with `.transform()` method, got {type(self.preprocessing_object)}")
+
             # Step 1: Apply scaling transformations using the pre-trained preprocessing object
             transformed_feature = self.preprocessing_object.transform(dataframe)
 
