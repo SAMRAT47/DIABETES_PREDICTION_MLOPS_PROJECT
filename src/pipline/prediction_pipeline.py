@@ -184,7 +184,7 @@ class DiabetesDataClassifier:
             Returns: Prediction in string format
             """
             try:
-                logging.info("Entered predict method of VehicleDataClassifier class")
+                logging.info("Entered predict method of DiabetesDataClassifier class")
                 model = Proj1Estimator(
                     bucket_name=self.prediction_pipeline_config.model_bucket_name,
                     model_path=self.prediction_pipeline_config.model_file_path,
