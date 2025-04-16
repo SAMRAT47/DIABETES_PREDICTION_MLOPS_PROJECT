@@ -102,6 +102,9 @@ async def index(request: Request):
 
 @app.get("/train", tags=["Training"])
 async def trainRouteClient():
+    """
+    Endpoint to initiate the model training pipeline.
+    """
     try:
         train_pipeline = TrainPipeline()
         train_pipeline.run_pipeline()
