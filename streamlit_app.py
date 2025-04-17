@@ -37,6 +37,7 @@ def show_logo():
         )
 
 # Load model from S3 using AWS credentials from secrets
+
 @st.cache_resource
 def load_model():
     config = DiabetesPredictorConfig()
@@ -49,15 +50,17 @@ def load_model():
         aws_access_key_id=aws_access_key,
         aws_secret_access_key=aws_secret_key
     )
+
     response = s3.get_object(Bucket=config.model_bucket_name, Key=config.model_file_path)
     model_bytes = response["Body"].read()
 
-    # Save to temporary file
+    # Save the model to a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pkl") as tmp_file:
         tmp_file.write(model_bytes)
         tmp_model_path = tmp_file.name
 
-    return Proj1Estimator(model_path=tmp_model_path)
+    # ✅ Correct order of arguments
+    return Proj1Estimator(bucket_name=config.model_bucket_name, model_path=tmp_model_path)
 
 # Main UI
 def main():
