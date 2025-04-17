@@ -35,19 +35,23 @@ def show_logo():
             unsafe_allow_html=True,
         )
 
-# Load model from S3
+# Load model from S3 using AWS credentials from secrets
 @st.cache_resource
 def load_model():
     config = DiabetesPredictorConfig()
 
+    # Access AWS credentials securely from the secrets file
     aws_access_key = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
     aws_secret_key = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
 
+    # Initialize boto3 client with credentials from secrets
     s3 = boto3.client(
         "s3",
         aws_access_key_id=aws_access_key,
         aws_secret_access_key=aws_secret_key
     )
+    
+    # Load the model from S3
     response = s3.get_object(Bucket=config.model_bucket_name, Key=config.model_file_path)
     model_bytes = io.BytesIO(response["Body"].read())
 
@@ -108,6 +112,7 @@ def main():
             diabetes_input = DiabetesData(**data)
             diabetes_df = diabetes_input.get_diabetes_input_data_frame()
 
+            # Load model and make prediction
             model = load_model()
             value = model.predict(dataframe=diabetes_df)[0]
 
