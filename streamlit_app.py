@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import base64
+import os
 
 from src.constants import APP_HOST, APP_PORT
 from src.pipline.prediction_pipeline import DiabetesData, DiabetesDataClassifier
@@ -36,11 +37,15 @@ def show_logo():
 @st.cache_resource
 def init_classifier():
     try:
+        # Set AWS credentials as environment variables
+        os.environ["AWS_ACCESS_KEY_ID"] = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
+        os.environ["AWS_SECRET_ACCESS_KEY"] = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
+        os.environ["AWS_DEFAULT_REGION"] = st.secrets["aws"]["REGION_NAME"]
+
         bucket_name = st.secrets["aws"]["BUCKET_NAME"]
         model_s3_key = st.secrets["aws"]["MODEL_PUSHER_S3_KEY"]
 
-        # ✅ Only initialize if no credentials are passed
-        s3_client = SimpleStorageService()
+        s3_client = SimpleStorageService()  # No need to pass credentials here
 
         classifier = DiabetesDataClassifier(
             s3=s3_client,
