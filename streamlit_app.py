@@ -49,6 +49,7 @@ def load_model():
         "s3",
         aws_access_key_id=aws_access_key,
         aws_secret_access_key=aws_secret_key
+        region_name="us-east-1"
     )
     response = s3.get_object(Bucket=config.model_bucket_name, Key=config.model_file_path)
     model_bytes = response["Body"].read()
