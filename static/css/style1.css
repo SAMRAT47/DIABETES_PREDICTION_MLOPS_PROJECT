@@ -1,129 +1,114 @@
-/* ==== Base App Styling ==== */
-.stApp {
-  font-family: 'Segoe UI', sans-serif;
-  color: #1c1c1c;
-  padding: 1rem;
+/* General styling for the entire page */
+body {
+  background-image: url("static/images/bg.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+  color: #333; /* Dark text color for better contrast */
 }
 
-/* ==== Banner and Logo Styling ==== */
+/* For headers and title */
+h1, h2, h3, h4, h5, h6 {
+  color: #2c3e50; /* Darker color for headers */
+}
+
+/* Style for the main container */
+.stApp {
+  background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white background for better text visibility */
+  padding: 20px;
+  border-radius: 8px;
+}
+
+/* Banner image */
+.banner {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
 .banner img.banner-image {
   width: 100%;
   max-height: 180px;
   object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
+  border-radius: 10px;
 }
 
+/* Logo styling */
 .logo img.logo-image {
-  width: 140px;
-  margin-bottom: 1rem;
-  border-radius: 10px;
+  width: 150px;
+  height: auto;
+  margin-bottom: 20px;
 }
 
-/* ==== Title and Subheaders ==== */
-h1 {
-  font-size: 2.5rem;
-  font-weight: bold;
-  color: #006699;
-  margin-bottom: 1rem;
+/* Input fields */
+input, select, textarea {
+  color: #333; /* Dark text color inside input fields */
+  background-color: #f4f4f9; /* Light background to contrast with dark text */
+  border: 1px solid #ddd; /* Light border */
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  width: 100%;
 }
 
-h2, .stSubheader {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #003366;
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #3498db; /* Blue border on focus */
+  box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); /* Subtle blue shadow */
 }
 
-/* ==== Input and Form Styling ==== */
-input[type="number"],
-input[type="text"],
-select {
-  background-color: #f8f9fa !important;
-  border: none !important;
-  border-radius: 8px !important;
-  padding: 10px !important;
-  font-size: 14px !important;
-  width: 100% !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-/* ==== Radio Buttons ==== */
-[data-baseweb="radio"] {
-  background-color: #f0f4f8 !important;
-  padding: 1rem;
-  border-radius: 10px;
-  margin-bottom: 1rem;
-}
-
-/* ==== Predict Button ==== */
-button[kind="primary"] {
-  background-color: #007acc !important;
-  color: white !important;
-  border-radius: 10px !important;
-  padding: 0.7rem 1.5rem !important;
-  font-weight: bold;
+/* Button styling */
+.stButton button {
+  background-color: #3498db; /* Blue background */
+  color: white; /* White text */
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
   transition: background-color 0.3s ease;
 }
 
-button[kind="primary"]:hover {
-  background-color: #005f99 !important;
+.stButton button:hover {
+  background-color: #2980b9; /* Darker blue on hover */
 }
 
-/* ==== Result Styling ==== */
-.stAlert {
-  border-radius: 10px !important;
-  padding: 1rem !important;
+/* Styling for the 'Predict' button to be visible before hovering */
+.stButton button:active, .stButton button:focus {
+  background-color: #2980b9; /* Maintain the same color when clicked or focused */
+}
+
+/* Add margin to columns for spacing */
+.stColumns > div {
+  margin: 10px;
+}
+
+/* Custom style for radio buttons and select dropdowns */
+.stRadio > label, .stSelectbox > label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Style for the title and subheader texts */
+h1, h2, h3 {
+  color: #2c3e50; /* Dark colors for all headings */
+}
+
+/* Styling for the prediction results */
+.stSuccess, .stError {
+  font-size: 16px;
   font-weight: bold;
-  font-size: 1rem;
+  padding: 10px;
+  margin-top: 20px;
 }
 
-.stAlert[data-testid="stAlert-error"] {
-  background-color: #fdecea !important;
-  color: #c62828 !important;
-  border-left: 6px solid #c62828 !important;
+.stSuccess {
+  background-color: #2ecc71; /* Green background for success */
+  color: white;
 }
 
-.stAlert[data-testid="stAlert-success"] {
-  background-color: #e8f5e9 !important;
-  color: #2e7d32 !important;
-  border-left: 6px solid #2e7d32 !important;
-}
-
-/* ==== Data Summary Table ==== */
-.css-1d391kg {
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-}
-
-/* ==== Warning / Info Box ==== */
-.stMarkdown .stAlert[data-testid="stAlert-warning"] {
-  background-color: #fff3cd !important;
-  border-left: 6px solid #ffca28 !important;
-  color: #856404 !important;
-}
-
-/* ==== Link Styling ==== */
-a {
-  color: #005f99;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* ==== Column Padding Fix ==== */
-.block-container .stColumn {
-  padding: 1rem;
-}
-
-/* Optional: hide Streamlit’s top-left menu and footer */
-header[data-testid="stHeader"] {
-  background: none;
-}
-
-footer {
-  visibility: hidden;
+.stError {
+  background-color: #e74c3c; /* Red background for error */
+  color: white;
 }
