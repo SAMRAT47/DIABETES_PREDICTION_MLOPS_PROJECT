@@ -71,6 +71,7 @@ Prediction Endpoint: Direct model inference pipeline integrated into the Streaml
 App URL: https://diabetespredictionmlopsproject-gyupmbyqqvr7exjhmwvyh7.streamlit.app/
 
 🖼️ Screenshot of the deployed application:
+
 ![image:](https://github.com/SAMRAT47/Dashboard_Projects/blob/excel_dashboard_branch/Fern%20and%20Petal/fnp%20dashboard.PNG)
 
 
