@@ -36,32 +36,18 @@ def show_logo():
 @st.cache_resource
 def init_classifier():
     try:
-        # Load AWS credentials and model S3 path from Streamlit secrets
-        access_key = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
-        secret_key = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
-        region_name = st.secrets["aws"]["REGION_NAME"]
         bucket_name = st.secrets["aws"]["BUCKET_NAME"]
         model_s3_key = st.secrets["aws"]["MODEL_PUSHER_S3_KEY"]
 
-        # ✅ Create S3 client
-        s3_client = SimpleStorageService(
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            region_name=region_name
-        )
+        # ✅ Only initialize if no credentials are passed
+        s3_client = SimpleStorageService()
 
-        # ✅ Initialize classifier with S3 client and model path
         classifier = DiabetesDataClassifier(
             s3=s3_client,
             bucket_name=bucket_name,
             model_path=model_s3_key
         )
-
         return classifier
-
-    except KeyError as e:
-        st.error(f"Missing AWS secret: {e}")
-        raise
 
     except Exception as e:
         st.error(f"Failed to initialize classifier: {e}")
