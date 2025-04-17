@@ -123,9 +123,9 @@ def main():
             diabetes_df = diabetes_input.get_diabetes_input_data_frame()
 
             model_predictor = init_classifier()
-            prediction = model_predictor.predict(dataframe=diabetes_df)[0]
+            value = model_predictor.predict(dataframe=diabetes_df)[0]
 
-            if prediction == 1:
+            if value == 1:
                 st.error("⚠️ Patient is **Diabetic**. Please consult your doctor.")
             else:
                 st.success("✅ Patient is **Non-Diabetic**. Keep up the healthy lifestyle!")
