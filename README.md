@@ -1,4 +1,6 @@
 🩺 Diabetes Prediction Using Machine Learning
+
+
 A full-scale ML Ops project that predicts the likelihood of diabetes in individuals based on medical parameters. This project demonstrates the end-to-end lifecycle of a machine learning system — from data ingestion and model training to deployment and continuous integration on cloud infrastructure.
 
 🔍 Project Overview
@@ -66,9 +68,11 @@ Hosting: Streamlit app deployed on EC2 instance with port open to public
 Prediction Endpoint: Direct model inference pipeline integrated into the Streamlit frontend
 
 🌐 Live Application
-App URL: https://<your-ec2-public-ip>:5080
+App URL: https://diabetespredictionmlopsproject-gyupmbyqqvr7exjhmwvyh7.streamlit.app/
 
 🖼️ Screenshot of the deployed application:
+
+![image:](https://github.com/SAMRAT47/Dashboard_Projects/blob/excel_dashboard_branch/Fern%20and%20Petal/fnp%20dashboard.PNG)
 
 
 🛠️ Tools & Technologies
