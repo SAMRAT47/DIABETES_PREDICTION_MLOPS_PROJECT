@@ -1,14 +1,10 @@
 import streamlit as st
 import pandas as pd
 import base64
-import boto3
-import io
-import tempfile
 
 from src.constants import APP_HOST, APP_PORT
-from src.pipline.prediction_pipeline import DiabetesData
-from src.entity.s3_estimator import Proj1Estimator
-from src.entity.config_entity import DiabetesPredictorConfig
+from src.pipline.prediction_pipeline import DiabetesData, DiabetesDataClassifier
+from src.pipline.training_pipeline import TrainPipeline  # if needed
 
 # Page setup
 st.set_page_config(page_title="Diabetes Prediction", layout="centered")
@@ -35,34 +31,6 @@ def show_logo():
             f'<div class="logo"><img src="data:image/png;base64,{encoded}" class="logo-image"></div>',
             unsafe_allow_html=True,
         )
-
-# Load model from S3 using AWS credentials from secrets
-
-def load_model():
-    config = DiabetesPredictorConfig()
-    aws_access_key = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
-    aws_secret_key = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
-    
-    # Ensure you're passing the credentials directly if they are available
-    s3 = boto3.client(
-        's3',
-        aws_access_key_id=aws_access_key,
-        aws_secret_access_key=aws_secret_key,
-        region_name="us-east-1"  # Set the region if necessary
-    )
-    
-    # Fetch model from S3
-    response = s3.get_object(Bucket=config.model_bucket_name, Key=config.model_file_path)
-    model_bytes = response["Body"].read()
-    
-    return model_bytes
-
-    # Save to temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pkl") as tmp_file:
-        tmp_file.write(model_bytes)
-        tmp_model_path = tmp_file.name
-
-    return Proj1Estimator(bucket_name=config.model_bucket_name, model_path=tmp_model_path)
 
 # Main UI
 def main():
@@ -101,6 +69,7 @@ def main():
         submitted = st.form_submit_button("Predict")
 
     if submitted:
+        # Get all values from session state
         data = {
             "Pregnancies": st.session_state["Pregnancies"],
             "BloodPressure": st.session_state["BloodPressure"],
@@ -119,9 +88,8 @@ def main():
             diabetes_input = DiabetesData(**data)
             diabetes_df = diabetes_input.get_diabetes_input_data_frame()
 
-            # Load model and make prediction
-            model = load_model()
-            value = model.predict(dataframe=diabetes_df)[0]
+            model_predictor = DiabetesDataClassifier()
+            value = model_predictor.predict(dataframe=diabetes_df)[0]
 
             if value == 1:
                 st.error("⚠️ Patient is **Diabetic**. Please consult your doctor.")
