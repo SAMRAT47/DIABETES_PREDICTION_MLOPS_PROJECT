@@ -10,8 +10,15 @@ html, body, .stApp {
   font-family: 'Segoe UI', sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6, p, label {
+h2, h3, h4, h5, h6, p, label {
   color: #111 !important;
+}
+
+h1 {
+  color: #007BFF !important;
+  font-size: 2.2rem !important;
+  font-weight: bold !important;
+  text-align: center !important;
 }
 
 /* ===== Input Fields ===== */
