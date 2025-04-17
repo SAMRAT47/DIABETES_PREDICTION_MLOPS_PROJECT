@@ -44,12 +44,12 @@ def init_classifier():
         bucket_name = st.secrets["aws"]["BUCKET_NAME"]
         model_s3_key = st.secrets["aws"]["MODEL_PUSHER_S3_KEY"]
 
-        s3_client = SimpleStorageService()  # No need to pass credentials here
-
+        # Initialize the classifier with AWS parameters
         classifier = DiabetesDataClassifier(
-            s3=s3_client,
             bucket_name=bucket_name,
-            model_path=model_s3_key
+            model_path=model_s3_key,
+            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"]
         )
         return classifier
 

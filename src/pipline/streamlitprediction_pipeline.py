@@ -155,24 +155,27 @@ class DiabetesData:
 
 
 class DiabetesDataClassifier:
-    def __init__(self, 
-                 prediction_pipeline_config: DiabetesPredictorConfig = DiabetesPredictorConfig(),
-                 bucket_name: str = None, 
-                 model_path: str = None, 
-                 aws_access_key_id: str = None, 
-                 aws_secret_access_key: str = None) -> None:
+    def __init__(self, bucket_name: str = None, model_path: str = None,
+                 aws_access_key_id: str = None, aws_secret_access_key: str = None) -> None:
+        """
+        :param bucket_name: S3 bucket name
+        :param model_path: Path to the model in S3
+        :param aws_access_key_id: AWS Access Key ID
+        :param aws_secret_access_key: AWS Secret Access Key
+        """
         try:
-            self.prediction_pipeline_config = prediction_pipeline_config
-            self.bucket_name = bucket_name or prediction_pipeline_config.model_bucket_name
-            self.model_path = model_path or prediction_pipeline_config.model_file_path
+            self.bucket_name = bucket_name
+            self.model_path = model_path
             self.aws_access_key_id = aws_access_key_id
             self.aws_secret_access_key = aws_secret_access_key
 
+            # Initialize S3 client
             self.s3 = boto3.client(
                 's3',
                 aws_access_key_id=self.aws_access_key_id,
                 aws_secret_access_key=self.aws_secret_access_key
             )
+
         except Exception as e:
             raise MyException(e, sys)
 
