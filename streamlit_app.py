@@ -4,7 +4,7 @@ import base64
 
 from src.constants import APP_HOST, APP_PORT
 from src.pipline.prediction_pipeline import DiabetesData, DiabetesDataClassifier
-from src.pipline.training_pipeline import TrainPipeline  # if needed
+from src.cloud_storage.aws_storage import SimpleStorageService
 
 # Page setup
 st.set_page_config(page_title="Diabetes Prediction", layout="centered")
@@ -31,6 +31,30 @@ def show_logo():
             f'<div class="logo"><img src="data:image/png;base64,{encoded}" class="logo-image"></div>',
             unsafe_allow_html=True,
         )
+
+# Initialize classifier with injected AWS secrets
+@st.cache_resource
+def init_classifier():
+    access_key = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
+    secret_key = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
+    region_name = st.secrets["aws"]["REGION_NAME"]
+    bucket_name = st.secrets["model"]["BUCKET_NAME"]
+    model_path = st.secrets["model"]["MODEL_PATH"]
+
+    # Create S3 client
+    s3 = SimpleStorageService(
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name=region_name
+    )
+
+    # Inject s3 client and parameters into your DiabetesDataClassifier
+    classifier = DiabetesDataClassifier(
+        s3=s3,
+        bucket_name=bucket_name,
+        model_path=model_path
+    )
+    return classifier
 
 # Main UI
 def main():
@@ -69,7 +93,6 @@ def main():
         submitted = st.form_submit_button("Predict")
 
     if submitted:
-        # Get all values from session state
         data = {
             "Pregnancies": st.session_state["Pregnancies"],
             "BloodPressure": st.session_state["BloodPressure"],
@@ -88,10 +111,10 @@ def main():
             diabetes_input = DiabetesData(**data)
             diabetes_df = diabetes_input.get_diabetes_input_data_frame()
 
-            model_predictor = DiabetesDataClassifier()
-            value = model_predictor.predict(dataframe=diabetes_df)[0]
+            model_predictor = init_classifier()
+            prediction = model_predictor.predict(dataframe=diabetes_df)[0]
 
-            if value == 1:
+            if prediction == 1:
                 st.error("⚠️ Patient is **Diabetic**. Please consult your doctor.")
             else:
                 st.success("✅ Patient is **Non-Diabetic**. Keep up the healthy lifestyle!")
