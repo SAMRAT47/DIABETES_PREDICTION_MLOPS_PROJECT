@@ -3,6 +3,7 @@ import pandas as pd
 import base64
 import boto3
 import io
+import tempfile
 
 from src.constants import APP_HOST, APP_PORT
 from src.pipline.prediction_pipeline import DiabetesData
@@ -40,22 +41,23 @@ def show_logo():
 def load_model():
     config = DiabetesPredictorConfig()
 
-    # Access AWS credentials securely from the secrets file
     aws_access_key = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
     aws_secret_key = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
 
-    # Initialize boto3 client with credentials from secrets
     s3 = boto3.client(
         "s3",
         aws_access_key_id=aws_access_key,
         aws_secret_access_key=aws_secret_key
     )
-    
-    # Load the model from S3
     response = s3.get_object(Bucket=config.model_bucket_name, Key=config.model_file_path)
-    model_bytes = io.BytesIO(response["Body"].read())
+    model_bytes = response["Body"].read()
 
-    return Proj1Estimator(model_bytes)
+    # Save to temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pkl") as tmp_file:
+        tmp_file.write(model_bytes)
+        tmp_model_path = tmp_file.name
+
+    return Proj1Estimator(model_path=tmp_model_path)
 
 # Main UI
 def main():
