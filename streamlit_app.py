@@ -2,20 +2,19 @@ import streamlit as st
 import pandas as pd
 import base64
 import os
-
 from src.constants import APP_HOST, APP_PORT
-from src.pipline.prediction_pipeline import DiabetesData, DiabetesDataClassifier
+from src.pipline.streamlitprediction_pipeline import DiabetesData, DiabetesDataClassifier
 from src.cloud_storage.aws_storage import SimpleStorageService
 
-# Page setup
+# Page setup: Set page title and layout
 st.set_page_config(page_title="Diabetes Prediction", layout="centered")
 
-# Load style.css
+# Load custom CSS for styling
 def load_css():
     with open("static/css/style1.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Show banner
+# Show banner image on the top
 def show_banner():
     with open("static/images/banner.jpg", "rb") as img:
         encoded = base64.b64encode(img.read()).decode()
@@ -24,7 +23,7 @@ def show_banner():
             unsafe_allow_html=True,
         )
 
-# Show logo
+# Show logo on the sidebar
 def show_logo():
     with open("static/images/logo.png", "rb") as img:
         encoded = base64.b64encode(img.read()).decode()
@@ -33,11 +32,11 @@ def show_logo():
             unsafe_allow_html=True,
         )
 
-# Initialize classifier with injected AWS secrets
+# Initialize the classifier, using AWS secrets
 @st.cache_resource
 def init_classifier():
     try:
-        # Set AWS credentials as environment variables
+        # Set AWS credentials from Streamlit secrets
         os.environ["AWS_ACCESS_KEY_ID"] = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
         os.environ["AWS_SECRET_ACCESS_KEY"] = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
         os.environ["AWS_DEFAULT_REGION"] = st.secrets["aws"]["REGION_NAME"]
@@ -58,15 +57,16 @@ def init_classifier():
         st.error(f"Failed to initialize classifier: {e}")
         raise
 
-# Main UI
+# Main UI function to collect user input and predict diabetes
 def main():
-    load_css()
-    show_banner()
-    show_logo()
+    load_css()  # Load custom CSS styles
+    show_banner()  # Show the banner image
+    show_logo()  # Show the logo
 
     st.markdown('<div class="form-container">', unsafe_allow_html=True)
     st.markdown("<h2>Diabetes Prediction Form</h2>", unsafe_allow_html=True)
 
+    # User input form
     with st.form("diabetes_form"):
         st.number_input("Pregnancies", key="Pregnancies", min_value=0, step=1)
         st.number_input("Blood Pressure", key="BloodPressure", min_value=0)
@@ -74,18 +74,21 @@ def main():
         st.number_input("Diabetes Pedigree Function", key="DiabetesPedigreeFunction", min_value=0.0, step=0.01)
         st.number_input("Age", key="Age", min_value=1)
 
+        # BMI and category input fields
         col1, col2 = st.columns(2)
         with col1:
             st.number_input("BMI (optional)", key="BMI", min_value=10.0, max_value=50.0, step=0.1)
         with col2:
             st.selectbox("BMI Category", options=["Underweight", "Normal", "Overweight", "Obesity_type1", "Obesity_type2"], key="NewBMI")
 
+        # Insulin and insulin category input fields
         col3, col4 = st.columns(2)
         with col3:
             st.number_input("Insulin (optional)", key="Insulin", min_value=0, max_value=500)
         with col4:
             st.selectbox("Insulin Category", options=["Normal", "Abnormal"], key="NewInsulinScore")
 
+        # Glucose and glucose category input fields
         col5, col6 = st.columns(2)
         with col5:
             st.number_input("Glucose (optional)", key="Glucose", min_value=0, max_value=300)
@@ -94,7 +97,9 @@ def main():
 
         submitted = st.form_submit_button("Predict")
 
+    # Prediction logic upon form submission
     if submitted:
+        # Collect form data into a dictionary
         data = {
             "Pregnancies": st.session_state["Pregnancies"],
             "BloodPressure": st.session_state["BloodPressure"],
@@ -110,16 +115,20 @@ def main():
         }
 
         try:
+            # Create DiabetesData object and convert to dataframe
             diabetes_input = DiabetesData(**data)
             diabetes_df = diabetes_input.get_diabetes_input_data_frame()
 
+            # Initialize classifier and predict
             model_predictor = init_classifier()
             value = model_predictor.predict(dataframe=diabetes_df)[0]
 
+            # Show result based on prediction
             if value == 1:
                 st.error("⚠️ Patient is **Diabetic**. Please consult your doctor.")
             else:
                 st.success("✅ Patient is **Non-Diabetic**. Keep up the healthy lifestyle!")
+
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
