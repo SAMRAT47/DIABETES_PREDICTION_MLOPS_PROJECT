@@ -1,4 +1,5 @@
 import streamlit as st
+import base64
 import pandas as pd
 import sys
 import os
@@ -217,6 +218,45 @@ class StreamlitModelLoader:
         except Exception as e:
             st.error(f"Error making prediction: {str(e)}")
             raise MyException(e, sys)
+        
+# Load CSS
+def load_css():
+    with open("static/css/style1.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# Show banner
+def show_banner():
+    with open("static/images/banner.jpg", "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+        st.markdown(
+            f'<div class="banner"><img src="data:image/jpg;base64,{encoded}" class="banner-image"></div>',
+            unsafe_allow_html=True,
+        )
+
+# Show logo
+def show_logo():
+    with open("static/images/logo.png", "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+        st.markdown(
+            f'<div class="logo"><img src="data:image/png;base64,{encoded}" class="logo-image"></div>',
+            unsafe_allow_html=True,
+        )
+
+def set_background_image(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded = base64.b64encode(image_file.read()).decode()
+        css = f"""
+        <style>
+        body {{
+            background-image: url("data:image/jpeg;base64,{encoded}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
 
 
 # Main Streamlit app
@@ -226,6 +266,11 @@ def main():
         page_icon="🩺",
         layout="wide"
     )
+    set_background_image("static/images/bg.jpg")
+    load_css()
+    show_banner()
+    show_logo()
+
     
     st.title("Diabetes Prediction Tool")
     st.write("Enter patient information to predict diabetes risk")
@@ -303,9 +348,9 @@ def main():
                 st.subheader("Prediction Result")
                 
                 if prediction == "Diabetic":
-                    st.error(f"The patient is predicted to be: {prediction}")
+                    st.error(f"⚠️ Patient is: {prediction}. Please consult your doctor🩺.")
                 else:
-                    st.success(f"The patient is predicted to be: {prediction}")
+                    st.success(f"✅ Patient is: {prediction}. Keep up the healthy lifestyle!")
                 
                 # Display input data for verification
                 st.subheader("Input Data Summary")
