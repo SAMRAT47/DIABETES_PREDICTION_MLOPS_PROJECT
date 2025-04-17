@@ -38,21 +38,24 @@ def show_logo():
 
 # Load model from S3 using AWS credentials from secrets
 
-@st.cache_resource
 def load_model():
     config = DiabetesPredictorConfig()
-
     aws_access_key = st.secrets["aws"]["AWS_ACCESS_KEY_ID"]
     aws_secret_key = st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"]
-
+    
+    # Ensure you're passing the credentials directly if they are available
     s3 = boto3.client(
-        "s3",
+        's3',
         aws_access_key_id=aws_access_key,
-        aws_secret_access_key=aws_secret_key
-        region_name="us-east-1"
+        aws_secret_access_key=aws_secret_key,
+        region_name="us-east-1"  # Set the region if necessary
     )
+    
+    # Fetch model from S3
     response = s3.get_object(Bucket=config.model_bucket_name, Key=config.model_file_path)
     model_bytes = response["Body"].read()
+    
+    return model_bytes
 
     # Save to temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pkl") as tmp_file:
