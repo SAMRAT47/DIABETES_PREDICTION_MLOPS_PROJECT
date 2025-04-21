@@ -51,17 +51,17 @@ class DataTransformation:
         """
         try:
             logging.info("Imputing missing values by class (Outcome).")
-            df_copy = df.copy()
-            numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
 
-            if TARGET_COLUMN not in df_copy.columns:
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+
+            if TARGET_COLUMN not in df.columns:
                 raise Exception(f"{TARGET_COLUMN} not found in dataframe for class-based imputation.")
 
             for col in numeric_cols:
-                if col != TARGET_COLUMN and df_copy[col].isnull().sum() > 0:
-                    df_copy[col] = df_copy.groupby(TARGET_COLUMN)[col].transform(lambda x: x.fillna(x.mean()))
+                if col != TARGET_COLUMN and df[col].isnull().sum() > 0:
+                    df[col] = df.groupby(TARGET_COLUMN)[col].transform(lambda x: x.fillna(x.mean()))
 
-            return df_copy
+            return df
         except Exception as e:
             raise MyException(e, sys)
         
