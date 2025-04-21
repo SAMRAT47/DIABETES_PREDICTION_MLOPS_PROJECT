@@ -73,21 +73,21 @@ class DataTransformation:
         """
         try:
             logging.info("Imputing outliers using IQR method.")
-            df_copy = df.copy()
-            numeric_cols = df_copy.select_dtypes(include=[np.number]).columns.tolist()
+
+            numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
             numeric_cols = [col for col in numeric_cols if col != TARGET_COLUMN]
 
             for col in numeric_cols:
-                Q1 = df_copy[col].quantile(0.25)
-                Q3 = df_copy[col].quantile(0.75)
+                Q1 = df[col].quantile(0.25)
+                Q3 = df[col].quantile(0.75)
                 IQR = Q3 - Q1
                 lower_bound = Q1 - 1.5 * IQR
                 upper_bound = Q3 + 1.5 * IQR
 
-                df_copy[col] = np.where(df_copy[col] < lower_bound, Q1, df_copy[col])
-                df_copy[col] = np.where(df_copy[col] > upper_bound, Q3, df_copy[col])
+                df[col] = np.where(df[col] < lower_bound, Q1, df[col])
+                df[col] = np.where(df[col] > upper_bound, Q3, df[col])
 
-            return df_copy
+            return df
 
         except Exception as e:
             raise MyException(e, sys)
